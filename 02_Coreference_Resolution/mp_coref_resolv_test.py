@@ -24,41 +24,58 @@ custom_date_parser = lambda x: dt.strptime(x, date_format)
 ## PREAMBLE FUNCTIONS 
 def checkDateIndex():
 
-    date_index_reference = 'date_index_reference.csv'
+    date_index_reference = 'issue_sheet_index.csv'
+    # chunksize = 1000
+    date_format = '%d-%b-%y'
+    custom_date_parser = lambda x: dt.strptime(x, date_format)
+
+    formatted_csv_path = '../00_The_Economist_Scraper/formatted_csvs/'
+    formatted_csv_stub = 'formatted_sub_article_text'
+    suffix = '.csv'
 
     if not os.path.isfile(date_index_reference):
-        print('dates need to be instantiated, proceeding to do that')
-        chunks = pd.read_csv('formatted_compiled_articles.csv', chunksize=chunksize, parse_dates =['date'], date_parser=custom_date_parser)
-        df = pd.concat(chunks)
-        last_row = len(df)
-        df = df['date']
-        df = df.drop_duplicates(keep='first')
+        print('date index needs to be instantiated, proceeding to do that')
+        #Initialize the index df
+        index_df = pd.DataFrame([], columns=['date_issue', 'sheet_path', 'sheet_num'])    
 
-        date_index_df = pd.DataFrame([], columns = ['date_issue', 'issue_starting_row', 'issue_ending_row'])
+        # GOING THROUGH EACH FORMATTED CSV
+        for sub_csv_index in tqdm(range(0,124)):
+            read_path = formatted_csv_path + formatted_csv_stub + str(sub_csv_index) + suffix
+            temp_df =  pd.read_csv(read_path, parse_dates=['date'], date_parser=custom_date_parser)
 
-        for index in tqdm(df.index.tolist()):
-            date_index_df.loc[index, 'date_issue'] = df.loc[index]
-            date_index_df.loc[index, 'issue_starting_row'] = index
-        
-        date_index_df.reset_index(drop=True, inplace=True)
+            # Identifying unique dates
+            temp_df = temp_df.drop_duplicates(subset=['date'], keep='first')
+            temp_df = temp_df['date']
 
-        for index in date_index_df.index:
-            try:
-                date_index_df.loc[index, 'issue_ending_row'] = date_index_df.loc[index+1, 'issue_starting_row']
-            except: 
-                date_index_df.loc[index, 'issue_ending_row'] = last_row
-        
-        date_index_df['date_issue'] = pd.to_datetime(date_index_df['date_issue'])
-        date_index_df.to_csv('date_index_reference.csv', index=False)
+            temp_index = pd.DataFrame([], columns=['date_issue', 'sheet_path', 'sheet_num'])
+
+            # Pulling out the info of interest 
+            for issue_row in temp_df.index.tolist():
+                row_obs = temp_df.loc[issue_row]
+                # recall that temp_df is now just a single column of 'date
+                temp_index.loc[issue_row, 'date_issue'] = temp_df.loc[issue_row].date()
+                temp_index.loc[issue_row, 'sheet_path'] = formatted_csv_path + formatted_csv_stub + str(sub_csv_index) + suffix
+                temp_index.loc[issue_row, 'sheet_num'] = sub_csv_index
+            ### REMEMBER THAT A DATE MIGHT APPEAR IN/CROSS OVER MORE THAN ONE SHEET
+            # Need to concat and reset indices because first instances of different issues may appear on the same row (i.e. "index" of temp_df) of different sheets. Need to do this to avoid conflicts
+            index_df = pd.concat([index_df, temp_index], ignore_index=True)
+            index_df.reset_index(drop=True, inplace=True)
+            index_df['date_issue'] = pd.to_datetime(index_df['date_issue'])
+
+        index_df.to_csv(date_index_reference, index=False)
+            
     else:
-        print('dates already indexed, carry on')
-        date_index_df = pd.read_csv('date_index_reference.csv', parse_dates=['date_issue'])
+        print('Issues are already indexed for their dates, carry on')
+        index_df = pd.read_csv(date_index_reference)
+        index_df['date_issue'] = pd.to_datetime(index_df['date_issue'])
 
-    return date_index_df
+    # print(index_df.head(5))
+
+    return index_df
         
-def leaderWindowConstructor(date_index_df):
+def leaderWindowConstructor(index_df):
 
-    ### READING IN LEADER TERM DATA
+        ### READING IN LEADER TERM DATA
     leader_term_name_df = pd.read_csv('all_leaders_econ_styling.csv', encoding='latin1')
     leader_term_name_df = leader_term_name_df.drop_duplicates(subset='leadid')
 
@@ -68,11 +85,14 @@ def leaderWindowConstructor(date_index_df):
 
     # leader_term_name_df
     for index in tqdm(leader_term_name_df.index.tolist()):
+        # FORMAT: start = dt(year, month, day)
         leader_term_name_df.loc[index, 'term_start'] = dt(leader_term_name_df.loc[index, 'start_year'], leader_term_name_df.loc[index, 'start_month'], leader_term_name_df.loc[index, 'start_date'])
-        try:
-            leader_term_name_df.loc[index, 'term_end'] = dt(leader_term_name_df.loc[index, 'end_year'], leader_term_name_df.loc[index, 'end_month'], leader_term_name_df[index+1, 'start_date'])
-        except:
-            leader_term_name_df.loc[index, 'term_end'] = dt(leader_term_name_df.loc[index, 'end_year'], leader_term_name_df.loc[index, 'end_month'], 28)
+        
+        # Push to the end of the month as far as possible (accounting for leap years)
+        # Note that we are pushing the end of the term out 6 months anyway (in case we miss an issue printed on the 29th-31st)
+        leader_term_name_df.loc[index, 'term_end'] = dt(leader_term_name_df.loc[index, 'end_year'], leader_term_name_df.loc[index, 'end_month'], 28)
+
+    # print(leader_term_name_df.head(5))
 
 
     # MATCHING TERM-WINDOWS (term length +/- 6 months) WITH ECONOMIST ISSUE DATES
@@ -84,30 +104,26 @@ def leaderWindowConstructor(date_index_df):
     # Constructing the 6 month window around the term start
     leaders_windows_indices_df = leaders_windows_indices_df.assign(leader_aprox_starts = lambda df: df.term_start - six_month_margin)
     leaders_windows_indices_df = leaders_windows_indices_df.assign(leader_aprox_ends = lambda df: df.term_end + six_month_margin)
-
+    leaders_windows_indices_df['leader_aprox_starts'] = pd.to_datetime(leaders_windows_indices_df['leader_aprox_starts'])
 
     # Merge window-start and window-end dates with the "nearest" (FORWARD OR BACKWARD) Economist issue date.
     # Read in that issue's starting row/index
+    # PRE-TERM
     leaders_windows_indices_df = leaders_windows_indices_df.sort_values(by=['leader_aprox_starts'])
-    leaders_windows_indices_df = pd.merge_asof(left=leaders_windows_indices_df, right=date_index_df, left_on='leader_aprox_starts', right_on='date_issue', direction='nearest')
-    leaders_windows_indices_df = leaders_windows_indices_df.drop(columns=['issue_ending_row'])
-    leaders_windows_indices_df = leaders_windows_indices_df.rename(columns={'date_issue' : 'date_start_issue'})
+    leaders_windows_indices_df = pd.merge_asof(left=leaders_windows_indices_df, right=index_df, left_on='leader_aprox_starts', right_on='date_issue', direction='nearest')
+    leaders_windows_indices_df = leaders_windows_indices_df.rename(columns={'date_issue' : 'date_start_issue', 'sheet_path' : 'start_sheet_path', 'sheet_num' : 'start_sheet_num'})
 
-
-    # Merge window-start and window-end dates with the "nearest" (FORWARD OR BACKWARD) Economist issue date.
-    # Read in that issue's ending row/index
+    # POST-TERM
     leaders_windows_indices_df = leaders_windows_indices_df.sort_values(by=['leader_aprox_ends'])
-    leaders_windows_indices_df = pd.merge_asof(left=leaders_windows_indices_df, right=date_index_df, left_on='leader_aprox_ends', right_on='date_issue', direction='nearest')
-    leaders_windows_indices_df = leaders_windows_indices_df.drop(columns=['issue_starting_row_y'])
-    leaders_windows_indices_df = leaders_windows_indices_df.rename(columns={'date_issue': 'date_end_issue', 'issue_starting_row_x': 'issue_starting_row'})
-
-
-    # Generating number of rows that need to be read-in from the formatted_compiled_articles.csv file
-    leaders_windows_indices_df = leaders_windows_indices_df.assign(nrows = lambda df: df.issue_ending_row - df.issue_starting_row - 1)
+    leaders_windows_indices_df = pd.merge_asof(left=leaders_windows_indices_df, right=index_df, left_on='leader_aprox_ends', right_on='date_issue', direction='nearest')
+    leaders_windows_indices_df = leaders_windows_indices_df.rename(columns={'date_issue': 'date_end_issue', 'sheet_path': 'end_sheet_path', 'sheet_num' : 'end_sheet_num'})
 
     # Add in titles and adjectives
     adjectives_df = pd.read_csv('national_titles_adjectives.csv').drop(columns=['country'])
     leaders_windows_indices_df = pd.merge(leaders_windows_indices_df, adjectives_df, how='left', on='ccode')
+
+
+    print(len(leader_term_name_df))
 
     return leaders_windows_indices_df
 
@@ -162,7 +178,6 @@ def leaderAliasGenerator(leader_observation):
 
     choices = [full_name, title_last_pref] + hon_list
 
-
     #Adding other/type of honorific if necessary/available
     if type(row.hos_title_other) != float:
         title_last_alt_tuple = (row.hos_title_other, row.econ_style_last)
@@ -184,10 +199,9 @@ def leaderAliasGenerator(leader_observation):
 
 # COREFERENCE RESOLUTION HELPER FUNCTIONS
 
-def identifyMainCluster(clusters, name, document):
+def identifyMainCluster(clusters, name_vect, document):
     clusters = clusters
-    aliases = name
-
+    aliases = name_vect
 
     for cluster in clusters:
         for index_pair in cluster:
@@ -202,17 +216,24 @@ def identifyMainCluster(clusters, name, document):
 
             if max(scores) >= 90:
                 cluster_index = clusters.index(cluster)
-                # print(cluster_index)
-                # print(top_set_match)
+                # print("CLUSTER AS STRING: " + cluster_as_string)
+                # print("FUZZY MATCH SCORES: " + str(top_set_match))
+                # print("CLUSTER: " + str(cluster))
+                # print("INDEX OF THAT CLUSTER" + str(cluster_index))
                 return cluster_index
 
     # There may be instances in which the leader is mentioned but not in a fashion that is sufficiently important to be picked up as an entity by the model. These are usually in instances where the leader is only an object in the sentence and never becomes a subject. In those instances no replacement takes place.
 
-def replaceCoref(name, clusters, cluster_interest_index, document, tokenized_df):
-    name_pos = name + "\'s"
-    name_pos = name_pos.split()
-    name = name.split()
 
+def replaceCoref(name, clusters, cluster_interest_index, document, tokenized_df):
+    name_string = name[0]
+    print(name_string)
+    
+    # name = name.split()
+    name_pos = name_string + "\'s"
+    name_pos = name_pos.split()
+    
+    # print(cluster_interest_index)
     base_cluster = clusters[cluster_interest_index]
     # print(base_cluster)
     
@@ -221,13 +242,11 @@ def replaceCoref(name, clusters, cluster_interest_index, document, tokenized_df)
     new_doc_list = document
 
     df = tokenized_df
-    
-    # print("REPLACING COREFERENCES")
-    # print(name_pos)
-    # print(name)
+    # print("REPLACING WITH: " + str(name) + " (or possessive)")
     for index_pair in rev_cluster:
         start_index = index_pair[0]
         stop_index = index_pair[1]+1
+        # print("REPLACING: " + str(new_doc_list[start_index:stop_index]))
 
         # Replacing one element (i.e. pronouns/possessives)
         if start_index == stop_index:
@@ -243,6 +262,7 @@ def replaceCoref(name, clusters, cluster_interest_index, document, tokenized_df)
             else:
                 new_doc_list[start_index:stop_index] = name
 
+    # print(new_doc_list)
     return new_doc_list
 
 def containsPossessive(df, start_index, stop_index):
@@ -264,18 +284,18 @@ def termLimitChecker(date, start, end):
         return "POST TERM"
 
 
-def resolverFunc(term_info, predictor, spacy_nlp_obj, chunked_df):
-
-    pbar = tqdm(total = len(chunked_df.index), position = int(mp.current_process().name[-1])-1)
-    pbar.set_description('THREAD' + mp.current_process().name[-1])
-
-    print('in resolver')
+def resolverFunc(term_info, aliases, predictor, spacy_nlp_obj, chunked_df):
 
     term_info = term_info
     name = term_info.econ_style_last.replace('.','')
     name = name.replace(' ', '')
+    leader_alias_choices = aliases,
     df = chunked_df
     nlp = spacy_nlp_obj
+
+
+    pbar = tqdm(total = len(chunked_df.index), position = int(mp.current_process().name[-1])-1)
+    pbar.set_description('THREAD: ' + mp.current_process().name[-1] + ' || '+ str(name))
 
     # Do coreference resolution on that subset of articles that mention the leader
 
@@ -290,17 +310,20 @@ def resolverFunc(term_info, predictor, spacy_nlp_obj, chunked_df):
             document_list = pred_obj['document']
             spacy_doc = nlp(pre_resolve_text) 
 
-            leader_name = name.title()
+            leader_name = leader_alias_choices[0]
 
             for token in spacy_doc:
                 tok_observation = [token.text, token.lemma_, token.pos_, token.tag_, token.dep_]
                 spacy_df.loc[len(spacy_df)] = tok_observation
 
-            cluster_of_interest = identifyMainCluster(document_clusters, leader_name, document_list)
+            cluster_of_interest = identifyMainCluster(document_clusters, leader_alias_choices, document_list)
 
+            print('here7')
             replaced = replaceCoref(leader_name, document_clusters, cluster_of_interest, document_list, spacy_df)
+            print('here8')
 
             df.loc[row_index, 'resolved_text'] = ' '.join(replaced)
+            df.loc[row_index, 'coreference_resolved_ind'] = True
             pbar.update()
 
         except Exception as e:
@@ -309,7 +332,6 @@ def resolverFunc(term_info, predictor, spacy_nlp_obj, chunked_df):
             df.loc[row_index, 'resolved_text'] = df.loc[row_index, 'text']
             pbar.update()
             continue
-
 
 
         df.loc[row_index, 'pre_in_post_term'] = termLimitChecker(df.loc[row_index, 'date'], term_info.term_start, term_info.term_end)
@@ -323,10 +345,8 @@ if __name__ == '__main__':
     leaders_windows_indices_df = leaderWindowConstructor(date_index_df)
 
     LEADER_BATCH_SIZE  = 2
-    MAX_NUM_CORES = mp.cpu_count()
+    MAX_NUM_CORES = 4
 
-
-    print('here1')
     predictor = Predictor.from_path('https://storage.googleapis.com/allennlp-public-models/coref-spanbert-large-2021.03.10.tar.gz')
     nlp = spacy.load('en_core_web_sm')
 
@@ -351,24 +371,44 @@ if __name__ == '__main__':
         name = name.replace(' ', '')
         leaderid = term_info.leadid.replace('.','')
         leader_gender_hon = term_info.gender
-        start_at_0 = True if term_info.issue_starting_row==0 else False
+        start_sheet = term_info.start_sheet_num
+        end_sheet = term_info.end_sheet_num
+        # start_at_0 = True if term_info.issue_starting_row==0 else False
+
+
+        # Instantiate a list which will contain DFs for future concatenation
+        chunk_list = []
 
         # These are the columns that we are going to get by default (make sure to title the new df with these incase we don't read row 0 of the .csv)
-        col_names = ['date', 'link', 'text']
+        # col_names = ['date', 'link', 'text']
 
         # Read in only the subset of the massive formatted_compiled_articles that pertain to a 6-month window around this leader's term
-        if start_at_0:
-            chunks = pd.read_csv('formatted_compiled_articles.csv', chunksize=1000, parse_dates=['date'], date_parser=custom_date_parser, nrows=term_info.nrows)
-            df = pd.concat(chunks)
-        else:
-            chunks = pd.read_csv('formatted_compiled_articles.csv', names = col_names, chunksize=1000, parse_dates=['date'], date_parser=custom_date_parser, skiprows=term_info.issue_starting_row +1, nrows=term_info.nrows)
-            df = pd.concat(chunks)
+        # if start_at_0:
+        #     chunks = pd.read_csv('formatted_compiled_articles.csv', chunksize=1000, parse_dates=['date'], date_parser=custom_date_parser, nrows=term_info.nrows)
+        #     df = pd.concat(chunks)
+        # else:
+        #     chunks = pd.read_csv('formatted_compiled_articles.csv', names = col_names, chunksize=1000, parse_dates=['date'], date_parser=custom_date_parser, skiprows=term_info.issue_starting_row +1, nrows=term_info.nrows)
+        #     df = pd.concat(chunks)
+
+        formatted_csv_path = '../00_The_Economist_Scraper/formatted_csvs/'
+        formatted_csv_stub = 'formatted_sub_article_text'
+        suffix = '.csv'
+
+
+        for sheet_num in range(start_sheet, end_sheet+1):
+            chunk_path  = formatted_csv_path + formatted_csv_stub + str(sheet_num) + suffix
+            chunk_df = pd.read_csv(chunk_path, parse_dates=['date'], date_parser=custom_date_parser)
+            chunk_list.append(chunk_df)
+
+        df = pd.concat(chunk_list, ignore_index=True)
+
 
         # Add some extra meta-data to this article-level observation
         df['ccode'] = term_info.ccode
         df['country'] = term_info.country
         df['resolved_text'] = ''
         df['pre_in_post_term'] = ''
+        df['coreference_resolved_ind'] = False
         df[name] = False
 
 
@@ -390,7 +430,7 @@ if __name__ == '__main__':
 
         print('pool established')
 
-        compiled = pd.concat(processPool.map(partial(resolverFunc, term_info, predictor, nlp), df_chunked))
+        compiled = pd.concat(processPool.map(partial(resolverFunc, term_info, leader_alias_choices, predictor, nlp), df_chunked))
         processPool.close()
         processPool.join()
         
