@@ -318,9 +318,9 @@ def resolverFunc(term_info, aliases, predictor, spacy_nlp_obj, chunked_df):
 
             cluster_of_interest = identifyMainCluster(document_clusters, leader_alias_choices, document_list)
 
-            print('here7')
+            # print('here7')
             replaced = replaceCoref(leader_name, document_clusters, cluster_of_interest, document_list, spacy_df)
-            print('here8')
+            # print('here8')
 
             df.loc[row_index, 'resolved_text'] = ' '.join(replaced)
             df.loc[row_index, 'coreference_resolved_ind'] = True
@@ -345,7 +345,7 @@ if __name__ == '__main__':
     leaders_windows_indices_df = leaderWindowConstructor(date_index_df)
 
     LEADER_BATCH_SIZE  = 2
-    MAX_NUM_CORES = 4
+    MAX_NUM_CORES = 11
 
     predictor = Predictor.from_path('https://storage.googleapis.com/allennlp-public-models/coref-spanbert-large-2021.03.10.tar.gz')
     nlp = spacy.load('en_core_web_sm')
@@ -421,7 +421,7 @@ if __name__ == '__main__':
             df.loc[leader_dummy_idx, name] = fuzzy_leader_search(string_to_search, leader_alias_choices)
 
         df = df[df[name] == True]
-        df = df.head(8)
+        df = df.head(22)
 
         print("number of articles identified for " + name + ": " + str(len(df)))
 
