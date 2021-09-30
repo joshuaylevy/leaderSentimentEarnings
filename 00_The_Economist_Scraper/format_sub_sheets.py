@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
+from datetime import datetime as dt
 import re
 import os
 
@@ -21,7 +22,6 @@ new_file_path = 'formatted_sub_article_text'
 suffix = '.csv'
 
 for file_index in tqdm(range(0, 124)):
-    print('starting to work on: {}'.format(file_index))
     read_in = pd.read_csv(folder_path + file_path + str(file_index) + suffix, quotechar='"', doublequote=True)
 
     # Instantiate the one-column dataframe
@@ -40,7 +40,8 @@ for file_index in tqdm(range(0, 124)):
     one_col = one_col.dropna()
 
     # Create a column that identifies a string as an issue-date based on regex: Label for a date-type observation = 1
-    one_col['date'] = one_col.apply(lambda row: 1 if re.match('\d{1,2}-[A-Za-z]{3}-\d{2}', row.all_string) else 0, axis=1)
+    # Christmas double-issue editions have a different date format (more on this below)
+    one_col['date'] = one_col.apply(lambda row: 1 if re.search('(.*(?=-Jan \d{1,2}))|(\d{1,2}-[A-Za-z]{3}-\d{2})', row.all_string) else 0, axis=1)
     # Create a column that identifies a string as a URL based on regex: Label for a URL-type observation = 2
     one_col['link'] = one_col.apply(lambda row: 2 if re.match('https://www-proquest-com.proxy.uchicago.edu/abicomplete/docview', row.all_string) else 0, axis=1)
     # Create a column that identifies a string as article text (i.e. not a date or link). Label for a text observation = 3.
@@ -94,6 +95,20 @@ for file_index in tqdm(range(0, 124)):
                 prep_vect = []
                 text_prep = []
             #Append the date string (type 1) to the helper vector
+            # Need to do some checking of the date format incase its a Christmas issue (different date format)
+            date_string = one_col.loc[index, 'all_string']
+            match = re.search('(.*(?=-Jan \d{1,2}))|(\d{1,2}-[A-Za-z]{3}-\d{2})', date_string)
+            extracted = match[0]
+            christmas_format = '%b %d, %Y'
+            # COERCE THE EXTRACTED (CHRISTMAS) STRING TO THE REGULAR FORMAT (first date is the publication date)
+            try:
+                extracted_as_date = dt.strptime(extracted, christmas_format)
+                extracted_string_fmt = extracted_as_date.strftime('%d-%b-%y')
+                one_col.loc[index, 'all_string'] = extracted_string_fmt
+            except:
+                # The date is already in the regular format ('%d-%b-%y') so we dont need to coerce it
+                pass
+            # Append whatever is now in the row of interest (properly formatted now.)
             prep_vect.append(one_col.loc[index, 'all_string'])
         elif row_type == 2:
             #Append the link string (type 2) to the helper vector
