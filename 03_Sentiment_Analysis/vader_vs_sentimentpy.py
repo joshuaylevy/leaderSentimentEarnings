@@ -20,6 +20,25 @@ def leaderFuzzySearch(sentence, name):
             continue
     return False
 
+
+def downweight_zero_mean(x):
+    print(x)
+    dropped = [num for num in x if pd.isnull(num)==False]
+    total_sum = sum(dropped)
+    zeros = len([num for num in dropped if num==0])
+    non_zeros = len([num for num in dropped if num!=0])
+    print(zeros)
+    if zeros == 0:
+        downweighted_mean = total_sum /(non_zeros)
+        return downweighted_mean
+    else:
+        try:
+            downweighted_mean = total_sum /(non_zeros + math.sqrt(math.log(zeros))) 
+            return downweighted_mean
+        except:
+            downweighted_mean = total_sum / len(dropped)
+            return downweighted_mean
+
 leader_of_interest = "gillard"
 date_format = '%d-%b-%y'
 custom_date_parser = lambda x: dt.strptime(x, date_format)
@@ -49,8 +68,6 @@ resolved_df['leader_sentence_dummy'] = resolved_df.apply(lambda row: "GILLARD" i
 
 analyzer = SentimentIntensityAnalyzer()
 
-print(resolved_df['leader_sentence_dummy'].unique())
-# print(resolved_df.tail(5))
 
 resolved_df['vader_comp_score'] = resolved_df['sentence'].apply(lambda row: analyzer.polarity_scores(row)['compound'])
 resolved_df['sentimentr_comp_score'] = resolved_df['sentence'].apply(lambda row: sentimentr.get_polarity_score(row))
@@ -58,7 +75,16 @@ resolved_df['sentimentr_comp_score'] = resolved_df['sentence'].apply(lambda row:
 resolved_df['vader_sentimentr_diff'] = resolved_df.vader_comp_score - resolved_df.sentimentr_comp_score 
 
 
-print(resolved_df.tail(5))
+
+entity_level_df = resolved_df.groupby(by=['article_id', 'leader_sentence_dummy', 'date'])['vader_comp_score', 'sentimentr_comp_score'].agg(pd.Series.tolist)
+entity_level_df.reset_index(inplace=True)
+
+entity_level_df['vader_comp_score'] = entity_level_df['vader_comp_score'].apply(lambda x: downweight_zero_mean(x))
+entity_level_df['sentimentr_comp_score'] = entity_level_df['sentimentr_comp_score'].apply(lambda x: downweight_zero_mean(x))
+entity_level_df['vader_sentimentr_diff'] = entity_level_df.vader_comp_score - entity_level_df.sentimentr_comp_score
+
+entity_level_df
+
 
 fig = px.scatter(resolved_df, x="date", y="sentimentr_comp_score", color="leader_sentence_dummy")
 fig.show()
