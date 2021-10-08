@@ -11,12 +11,13 @@
 \usepackage{subcaption}
 \usepackage{etoolbox}
 \usepackage{graphicx}
-\usepackage{amsmath}
+\usepackage{amsmath, amssymb}
 \usepackage{cleveref}
 \usepackage{wrapfig}
 \usepackage{afterpage}
 \usepackage{floatrow}
 \usepackage{tikz}
+\usepackage{booktabs}
 
 \setlength\parindent{0pt}
 
@@ -122,14 +123,16 @@ SentimentR conducts analysis at the sentence-level. Thus, as noted above, maximi
 
 To test the validity of the SentimentR results, we also employ VADER, a similar sentiment analysis packaged developed for Python. In much the same way as its R counterpart, VADER uses valence shifters and a dictionary of polarity scores to gauge the sentiment expressed by a given sentence.
 
-\subsection{Preliminary Sentiment Results: Figures}
-Below is an example of SentimentR output based on 233 articles of text for Jose Maria Aznar, former prime minister of Spain. The imposed lines are lowess-smoothed lines of entity-level sentiment at each date of observation (issue publication date). Each point in the scatter plot is a sentence level observation. SentimentR normalizes all composite scores to an interval that ranges from -1, the most negative, to 1 the most positive.\footnote{Note that observations for a single sentence can exceed this range due to the effect of valence shifters. We subsequently refer to this type of figure as a ``leader figure''} This process is replicated for every leader of Spain in our time series (from 1992 to 2020) and the results are concatenated as presented in Figure 2.\footnote{We subsequently refer to this type of figures as a ``timeline figure.''}
-
 \begin{figure} % LEADER FIGURE
     \caption{Sentiment expressed by \textit{The Economist} about Aznar (Spain)}
     \centering
     \includegraphics[clip, width=\textwidth]{figures/aznarA29-4231_leader_figure.png}
 \end{figure}
+
+\subsection{Preliminary Sentiment Results: Figures}
+Below is an example of SentimentR output based on 233 articles of text for Jose Maria Aznar, former prime minister of Spain. The imposed lines are lowess-smoothed lines of entity-level sentiment at each date of observation (issue publication date). Each point in the scatter plot is a sentence level observation. SentimentR normalizes all composite scores to an interval that ranges from -1, the most negative, to 1 the most positive.\footnote{Note that observations for a single sentence can exceed this range due to the effect of valence shifters. We subsequently refer to this type of figure as a ``leader figure''} This process is replicated for every leader of Spain in our time series (from 1992 to 2020) and the results are concatenated as presented in Figure 2.\footnote{We subsequently refer to this type of figures as a ``timeline figure.''}\\
+
+
 
 \begin{figure} % TIMELINE FIGURE
     \caption{Sentiment expressed by \textit{The Economist} about Spanish leaders}
@@ -146,7 +149,7 @@ As detailed above, we segregate leader-sentences from ambient-sentences in order
 \end{figure}
 
 
-We also conduct a similar heuristic test of whether VADER and SentimentR agree on the sentiment expressed in a given article. In Figure 4 below, we plot the $R^2$ value of a simple OLS regression of SentimentR score on VADER score.\footnote{We subsequently refer to this type of figure as a ``sentiment score heatmap.'' The OLS model computed can be expressed by $\text{SentimentR} = \alpha +\beta \text{VADER} + \epsilon$. } Note that despite its simplicity (the only regressor is SentimentR score), most models exhibit a very high goodness-of-fit. An interactive version of this heatmap can be accessed online at this link. Plots of individual leader-level correlations can be found in this files repo.\footnote{Navigate to 00_README_DOCUMENTATION/figures/plotly_VADER_SENTIMENTR_corel_facet.png} Again, note that VADER and SentimentR scores are tightly correlated.
+We also conduct a similar heuristic test of whether VADER and SentimentR agree on the sentiment expressed in a given article. In Figure 4 below, we plot the $R^2$ value of a simple OLS regression of SentimentR score on VADER score.\footnote{We subsequently refer to this type of figure as a ``sentiment score heatmap.'' The OLS model computed can be expressed by $\text{SentimentR} = \alpha +\beta \text{VADER} +\epsilon$. } Note that despite its simplicity (the only regressor is VADER score), most models exhibit a very high goodness-of-fit. An interactive version of this heatmap can be accessed online at this \href{https://chart-studio.plotly.com/~jyl63/101/#/}{link}. Plots of individual leader-level correlations can be found in this files repo.\footnote{Navigate to 00\_README\_DOCUMENTATION/figures/plotly\_VADER\_SENTIMENTR\_corel\_facet.png} Again, note that VADER and SentimentR scores are tightly correlated.
 
 \begin{figure}
     \caption{Goodness-of-fit of OLS Model fitting SentimenR scores to VADER scores}
@@ -157,14 +160,45 @@ We also conduct a similar heuristic test of whether VADER and SentimentR agree o
 \subsection{Preliminary Sentiment Results: Discussion}
 There are three  important results worth noting. Firstly, VADER and SentimentR both return results that suggest that the ambient sentiment expressed by \textit{The Economist} is very neutral (scores cluster near 0). That is, over time, articles published by \textit{The Economist} that mention leaders of interest have neither a disaster-bias (which would likely carry negative ambient sentiment) nor a blessing-bias (which would likely carry positive ambient sentiment).\\
 
-
-
 More importantly however, observations leader sentiment appears to exhibit a similar property --- that is, over time, leader-sentiment also appears to be very neutral. This may be a credit to the apparent impartiality of the \textit{The Economist's} editorial staff. However, it also leaves us with the problem of having little heterogeneity to exploit in future analysis. Some potential solutions are presented below.\\
 
 Finally, recall that SentimentR and VADER scores are very tightly correlated. This is encouraging in that both packages are identifying similar sentiment patterns in the articles of interest. Notably, however, VADER scores exhibit much higher variance than do SentimentR scores. That is, VADER assigns higher scores to positive sentences and lower scores to negative sentences than does SentimentR. This property appears to be symmetric in that it amplifies positive scores about as much as it amplifies negative scores. Thus, the leader-neutrality problem described above cannot simply be resolved by switching to use of VADER as, over time, average leader-sentiment would remain neutral.
 
 \subsection{Countries}
-Below is a list of countries for which figures are available:
+Below is a list of countries for which figures are available. Any unavailable figures can be produced on-demand with the \texttt{leader\_sentiment\_general.R} script. This figures can be accessed at the following by following this \href{https://github.com/joshuaylevy/leaderSentimentEarnings/tree/jyl-vader-Economist-alias/00_README_DOCUMENTATION/figures}{link}
+
+
+\begin{table}[]
+    \caption{Figures that have been completed and uploaded to GitHub}
+    \begin{tabular}{@{}lcccccc@{}}
+    \toprule
+    & \multicolumn{1}{l}{} & \multicolumn{1}{l}{} & \multicolumn{1}{l}{} & \multicolumn{2}{c}{Entity Correlation} & \multicolumn{1}{l}{} \\ \cmidrule(lr{.75em}){5-6}
+    Country    & CCODE & Leader figures & Timeline Figure & \multicolumn{1}{c}{Faceted} & \multicolumn{1}{c}{Together} & Present in Heatmap   \\ \midrule
+    Australia   & 900 &            & \checkmark & \checkmark & \checkmark & \checkmark \\
+    Austria     & 305 &            & \checkmark & \checkmark & \checkmark & \checkmark \\
+    Brazil      & 140 &            &            &            &            & \checkmark \\
+    Canada      & 20  &            & \checkmark & \checkmark & \checkmark & \checkmark \\
+    France      & 220 &            & \checkmark & \checkmark & \checkmark & \checkmark \\
+    Germany     & 255 &            &            &            &            & \checkmark \\
+    Greece      & 350 &            & \checkmark & \checkmark & \checkmark & \checkmark \\
+    Hungary     & 310 &            &            &            &            & \checkmark \\
+    India       & 750 &            &            &            &            & \checkmark \\
+    Japan       & 740 &            &            &            &            & \checkmark \\
+    New Zealand & 920 &            &            &            &            & \checkmark \\
+    Norway      & 385 &            &            &            &            & \checkmark \\
+    Spain       & 230 &            & \checkmark & \checkmark & \checkmark & \checkmark \\
+                &     &            &            &            &            &            \\ \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Sentiment Analysis: Next Steps}
+Using relatively naive sentiment analysis tools like SentimentR or VADER have some advantages in ease of use but are relatively rudimentary and used more often for sentiment classification (i.e. using scores as thresholds between discrete ``negative,'' ``neutral,'' and ``positive'' categories) of explicitly editorial documents (e.g. movie or restaurant reviews) or smaller documents (Tweets, for example). This problem is compounded twice over: once by the way the deeply idiomatic style in which \textit{The Economist} writes; and twice by the type of sentiment we are trying to identify. In reality we are trying to identify the sentiment of an article's \textit{evaluation} of a leader.\\
+
+This additional layer of abstraction requires a more sophisticated method for identifying leader sentiment. I propose using topic modelling techniques detailed here:
+\begin{itemize}
+    \item \href{https://towardsdatascience.com/text-classification-with-no-model-training-935fe0e42180}{BERT for Text Classification with No Model Trainging}\\
+    \item \href{https://towardsdatascience.com/text-analysis-feature-engineering-with-nlp-502d6ea9225d}{Text Analyses \& Feature Engineering with NLP}
+\end{itemize}
 
 
 \section{04 - Officer Pay}
