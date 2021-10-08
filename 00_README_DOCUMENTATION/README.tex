@@ -114,53 +114,57 @@ Because the corpus of \textit{The Economist} contains many more non-leader sente
 \section{03 - Sentiment Analysis}
 To test our hypothesis, it is necessary to have a systematic way by which to evaluate the way\textit{The Economist} writes about (various) leaders, and indeed if there exists considerable hetereogeneity in its editorial position on each leader's performance. That is, we need a way to consistently measure if \textit{The Economists} writes more favorably of some leaders than it does others.\\
 
-The tool that I use, an R package called SentimentR, attempts to do this by using an ``augmented dictionary approach.'' \cite{rinker2019sentimentr} The most simple way to measure sentiment is to first construct a dictionary of ``positive'' and ``negative'' words, and then simply tally up the number of times such words appear in a body of text. One could additionally, weight some words more heavily than others --- ``exemplary,'' for example might receive a stronger positive weighting than ``fair.''\\
+The tool that we use, an R package called SentimentR, attempts to do this by using an ``augmented dictionary approach.'' \cite{rinker2019sentimentr} The most simple way to measure sentiment is to first construct a dictionary of ``positive'' and ``negative'' words, and then simply tally up the number of times such words appear in a body of text. One could additionally, weight some words more heavily than others --- ``exemplary,'' for example might receive a stronger positive weighting than ``fair.''\\
 
-SentimentR introduces another layer of complexity by identifying ``valence shifters,'' that may amplify, mitigate, or completely alter the sentiment of a cluster of positive or negative words. After identifying ``polarity clusters,'' the SentmentR algorithm alters a sentence's score based on the presence or absence of these shifters. Words like ``however,'' ``but,'' and ``although,'' for example, are adversative conjunctions that can amplify or de-amplify a cluster's polarity based on their position in the sentence relative to the cluster.\\
+SentimentR introduces another layer of complexity by identifying ``valence shifters,'' that may amplify, mitigate, or negate the sentiment of a cluster of positive or negative words. After identifying ``polarity clusters,'' the SenitmentR algorithm alters a sentence's score based on the presence or absence of these shifters. Words like ``however,'' ``but,'' and ``although,'' for example, are adversative conjunctions that can amplify or de-amplify a cluster's polarity based on their position in the sentence relative to the cluster.\\
 
-SentimentR conducts analysis at the sentence-level. Thus, as noted above, maximizing the number of sentences that mention a leader is important because an article's latent information about a leader's competence can easily be identified by a human reader but not by a computer.\\
+SentimentR conducts analysis at the sentence-level. Thus, as noted above, maximizing the number of sentences that mention a leader is important because an article's latent information about a leader's competence can easily be identified by a human reader but not by a computer. Once articles that mention a leader of interest is identified, it is split on its sentence boundaries, and then each sentence is identified as either a ``leader-sentence'' --- that is, the sentence itself mentions the leader --- or an ``ambient-sentence'' which does not. A polarity score is then generated for each sentence. We segregate leader-sentences from ambient-sentences because the sentiment of an article at large may be contrary to the sentiment expressed about the leader of interest. Consider, for example, a hypothetical article that has a negative sentiment due to an ongoing political or economic crisis. Despite the dour mood expressed by such an article, \textit{The Economist} can still be laudatory of the leader managing the crisis. We would be interested in the positive sentiment expressed about the leader despite the circumstances he or she may face.  We additionally aggregate these sentence-level sentiment scores to the ``entity-level'' --- an average of all leader-sentence or ambient-sentence scores in each article. \footnote{When aggregating sentence-level sentiment to the entity-level, SentimentR uses a weighted average that down-weights the scores of neutral sentences (on the assumption that users are interested in identifying the positive-/negative- leanings of the document at large. We replicate this weighted average when aggregating VADER scores detailed below.)} 
 
-Below is an example of SentimentR output based on 79 articles worth of text. Each point represents a sentence observation. The imposed line is Lowess-smoothed line of average sentiment at each date of observation (issue publication date). Note that though sentiment generally ranges from -1, the most negative, to 1, the most positive, valence shifters can give a sentence a score beyond these bounds. The entire sample of sentences are from articles that mention ``Obuchi'' (or one of the appropriate aliases). \\
+To test the validity of the SentimentR results, we also employ VADER, a similar sentiment analysis packaged developed for Python. In much the same way as its R counterpart, VADER uses valence shifters and a dictionary of polarity scores to gauge the sentiment expressed by a given sentence.
 
+\subsection{Preliminary Sentiment Results: Figures}
+Below is an example of SentimentR output based on 233 articles of text for Jose Maria Aznar, former prime minister of Spain. The imposed lines are lowess-smoothed lines of entity-level sentiment at each date of observation (issue publication date). Each point in the scatter plot is a sentence level observation. SentimentR normalizes all composite scores to an interval that ranges from -1, the most negative, to 1 the most positive.\footnote{Note that observations for a single sentence can exceed this range due to the effect of valence shifters. We subsequently refer to this type of figure as a ``leader figure''} This process is replicated for every leader of Spain in our time series (from 1992 to 2020) and the results are concatenated as presented in Figure 2.\footnote{We subsequently refer to this type of figures as a ``timeline figure.''}
 
-\newpage
-\begin{figure}
+\begin{figure} % LEADER FIGURE
+    \caption{Sentiment expressed by \textit{The Economist} about Aznar (Spain)}
     \centering
-    \includegraphics[clip, width=0.8\textwidth]{figures/obuchi_sentiment_time.png}
-    \caption{Average sentiment of ``Obuchi'' sentences over time}
+    \includegraphics[clip, width=\textwidth]{figures/aznarA29-4231_leader_figure.png}
 \end{figure}
 
-% \begin{table}[ht]
-%     \small{\textbf{Table 2:} SentimentR Results for Articles Containing ``Clinton''}
-%     \centering
-%     \begin{tabular}{rlrrr}
-%       \hline
-%      & Sentence Type & Word Count & SD & Mean Sentiment \\ 
-%       \hline
-%     1 & CLINTON & 1277 & 0.25 & 0.0125 \\ 
-%       2 & OTHER & 3490 & 0.30 & -0.0127 \\ 
-%        \hline
-%     \end{tabular}
-% \end{table}
-% \vspace{0.2\textwidth}
-
-
-\subsection{Spain (CCODE=230):}
-\begin{figure}
+\begin{figure} % TIMELINE FIGURE
+    \caption{Sentiment expressed by \textit{The Economist} about Spanish leaders}
     \centering
-    \includegraphics[clip, width=0.8\textwidth]{figures/230_timeline_figure.png}
-    \caption{Average sentiment of Spanish leader sentences over time}
+    \includegraphics[clip, width=\textwidth]{figures/230_timeline_fig.png}
 \end{figure}
 
+As detailed above, we segregate leader-sentences from ambient-sentences in order to separate evaluations of the leader of interest from the ambient sentiment that may be more reflective of a crisis, a particular event, or conditions outside the control of the leader. In Figure 3, we plot \textit{The Economist's} sentiment about a leader against ambient sentiment expressed in the same article. The 45-degree line in black indicates perfect correlation between ambient- and leader-sentiment.\footnote{We subsequently refer to this type of figure as a ``entity correlation plot.'' In some instances many leaders are plotted ``together'' or are ``faceted.''} This exercise serves as a heuristic test of whether segregating leader sentiment from ambient sentiment is worthwhile. That is, if leader and ambient sentiment are highly correlated, the segregation step could be bypassed and sentiment could simply be evaluated at the article level (perhaps even without coreference resolution.) Note in Figure 3 that there is no clear corelation between leader- and ambient-sentiment, suggesting that the segregation process is an important step in identifying \textit{The Economist's} evaluation of a given leader.\\
+
 \begin{figure}
+    \caption{Sentiment expressed by \textit{The Economist} vs. ambient sentiment expressed in the same articles}
     \centering
-    \includegraphics[clip, width=0.8\textwidth]{figures/230_timeline_figure.png}
-    \caption{Average sentiment of Spanish leader sentences over time}
+    \includegraphics[clip, width=\textwidth]{figures/230_corel_facet.png}
 \end{figure}
 
 
+We also conduct a similar heuristic test of whether VADER and SentimentR agree on the sentiment expressed in a given article. In Figure 4 below, we plot the $R^2$ value of a simple OLS regression of SentimentR score on VADER score.\footnote{We subsequently refer to this type of figure as a ``sentiment score heatmap.'' The OLS model computed can be expressed by $\text{SentimentR} = \alpha +\beta \text{VADER} + \epsilon$. } Note that despite its simplicity (the only regressor is SentimentR score), most models exhibit a very high goodness-of-fit. An interactive version of this heatmap can be accessed online at this link. Plots of individual leader-level correlations can be found in this files repo.\footnote{Navigate to 00_README_DOCUMENTATION/figures/plotly_VADER_SENTIMENTR_corel_facet.png} Again, note that VADER and SentimentR scores are tightly correlated.
+
+\begin{figure}
+    \caption{Goodness-of-fit of OLS Model fitting SentimenR scores to VADER scores}
+    \centering
+    \includegraphics[clip, width=\textwidth]{figures/plotly_VADER_SENTIMENTR_rsquared_heatmap.png}
+\end{figure}
+
+\subsection{Preliminary Sentiment Results: Discussion}
+There are three  important results worth noting. Firstly, VADER and SentimentR both return results that suggest that the ambient sentiment expressed by \textit{The Economist} is very neutral (scores cluster near 0). That is, over time, articles published by \textit{The Economist} that mention leaders of interest have neither a disaster-bias (which would likely carry negative ambient sentiment) nor a blessing-bias (which would likely carry positive ambient sentiment).\\
 
 
+
+More importantly however, observations leader sentiment appears to exhibit a similar property --- that is, over time, leader-sentiment also appears to be very neutral. This may be a credit to the apparent impartiality of the \textit{The Economist's} editorial staff. However, it also leaves us with the problem of having little heterogeneity to exploit in future analysis. Some potential solutions are presented below.\\
+
+Finally, recall that SentimentR and VADER scores are very tightly correlated. This is encouraging in that both packages are identifying similar sentiment patterns in the articles of interest. Notably, however, VADER scores exhibit much higher variance than do SentimentR scores. That is, VADER assigns higher scores to positive sentences and lower scores to negative sentences than does SentimentR. This property appears to be symmetric in that it amplifies positive scores about as much as it amplifies negative scores. Thus, the leader-neutrality problem described above cannot simply be resolved by switching to use of VADER as, over time, average leader-sentiment would remain neutral.
+
+\subsection{Countries}
+Below is a list of countries for which figures are available:
 
 
 \section{04 - Officer Pay}
@@ -171,7 +175,6 @@ Below is a sample of OECD nation's leaders and their pay. (Note that this is an 
 \begin{figure}
     \centering
     \includegraphics[clip, width=0.8\textwidth]{figures/leader_pay.png}
-
 \end{figure}
 
 

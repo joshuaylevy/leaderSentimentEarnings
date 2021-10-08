@@ -7,8 +7,8 @@ library(stringr)
 library(tools)
 library(ggtext)
 
-setwd("~/Work/UChicago/leaderSentimentEarnings/03_Sentiment_Analysis")
-#setwd("~/leaderSentimentEarnings/03_Sentiment_Analysis")
+#setwd("~/Work/UChicago/leaderSentimentEarnings/03_Sentiment_Analysis")
+setwd("~/leaderSentimentEarnings/03_Sentiment_Analysis")
 
 files_list <- list.files(path='../02_Coreference_Resolution/leader_resolved')
 
@@ -240,7 +240,7 @@ batch_timeline_figures <- function(ccode_param) {
       geom_smooth(data=ccode_entity_sentiment,
                   aes(x=date, y=ave_sentiment, color=leader_sentence_dummy, group=leadid),
                   method="loess",
-                  span=0.8,
+                  span=0.5,
                   size=2,
                   se=FALSE)+
       #geom_line(data=ccode_entity_sentiment,
@@ -648,3 +648,19 @@ batch_corel_figures(c(220), c(), TRUE, FALSE, '220_corel_facet')
 
 batch_corel_figures(c(220), c(), FALSE, TRUE, '220_corel_together')
 `220_corel_together`
+#######################################GREECE#
+##############################################
+batch_sentiment(c(350), c())
+
+batch_timeline_figures(c(350))
+`350_timeline_fig`
+
+batch_corel_figures(c(350), c(), FALSE, FALSE, '')
+
+
+
+batch_corel_figures(c(350), c(), TRUE, FALSE, '350_corel_facet')
+`350_corel_facet`
+
+batch_corel_figures(c(350), c(), FALSE, TRUE, '350_corel_together')
+`350_corel_together`
