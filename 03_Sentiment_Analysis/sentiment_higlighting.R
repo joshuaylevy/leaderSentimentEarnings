@@ -1,0 +1,166 @@
+library(magrittr)
+library(tidyverse)
+library(sentimentr)
+library(xtable)
+library(ggrepel)
+library(lubridate)
+library(stringr)
+library(tools)
+library(ggtext)
+
+#setwd("~/Work/UChicago/leaderSentimentEarnings/03_Sentiment_Analysis")
+setwd("~/leaderSentimentEarnings/03_Sentiment_Analysis")
+
+
+
+files_list <- list.files(path='../02_Coreference_Resolution/leader_resolved')
+
+palette_generator <- function(df) {
+  gg_color_hue <- function(n) {
+    hues = seq(15, 375, length = n + 1)
+    hcl(h = hues, l = 65, c = 100)[1:n]
+  }
+  
+  leaders_vect <- df$leader_sentence_dummy %>%
+    unique() %>%
+    as.character()
+  leaders_vect <- leaders_vect[leaders_vect != "OTHER"]
+  num_leaders <- length(leaders_vect)
+  
+  pal_vals <- gg_color_hue(num_leaders)
+  pal_vals[length(pal_vals)+1] <- "#696969"
+  pal_breaks <- leaders_vect
+  pal_breaks[length(pal_breaks)+1] <- "OTHER"
+  
+  print(pal_vals)
+  print(pal_breaks)
+  
+  return(list(pal_vals, pal_breaks))
+}
+
+### Using RegEx to extract leader and country information from file_name
+# (NOTE THAT WE WILL EVENTUALLY HAVE TO DROP THE _temp.csv suffix)
+files_df <- tibble(files_list) %>%
+  rename(file_name = files_list) %>%
+  mutate(ccode = str_match(file_name, "(?=ccode-(\\d{1,3}))")[,2] %>%
+           as.integer(),
+         leadid = str_match(file_name, "(?=leadid-(.*)(?=\\_temp.csv))")[,2],)
+
+
+#############################################
+#Generating the sentiment dataframes en masse
+batch_sentiment <- function(ccode_param, leadid_param) {
+  print(c("CCODDE PARAMETER: ", ccode_param))
+  print(c("LEADID PARAMETER: ", leadid_param))
+  files_vect <- files_df %>%
+    filter(ccode %in% ccode_param | leadid %in% leadid_param) %>%
+    select(file_name)
+  
+  files_list <- deframe(files_vect)
+  for (file in files_list) {
+    print(file)
+    # READING IN RAW 
+    leader_name <- paste0(str_match(file,"(.*(?=_resolved))")[,2],
+                          str_match(file, "(?=leadid-(.*)(?=_temp.csv))")[,2])
+    print(leader_name)
+    leader_name_only <- str_match(file, "(.*(?=_resolved))")[,2]
+    caps_name <- toupper(leader_name_only)
+    print(caps_name)
+    file_path <- paste0('../02_Coreference_Resolution/leader_resolved/', file)
+    assign(paste0(leader_name, '_raw'), read_csv(file_path, locale=locale(encoding="UTF-8")))
+    
+    # PROCESSING
+    p <- get(paste0(leader_name, '_raw')) %>%
+      mutate(article_id = as.factor(row_number())) %>%
+      select(-c(text)) %>%
+      mutate(sentences = get_sentences(resolved_text)) %>%
+      unnest(cols = c(sentences)) %>%
+      mutate(leader_sentence_dummy = ifelse(grepl(caps_name,
+                                                  sentences,
+                                                  ignore.case=TRUE),
+                                            caps_name,
+                                            'OTHER'))
+    assign(paste0(leader_name, '_processed'), p, envir = .GlobalEnv)
+    
+    # GENERATE ENTITY SENTIMENT (with sentimentr)
+    e <- get(paste0(leader_name, '_processed')) %$%
+      sentiment_by(sentences, list(leader_sentence_dummy, article_id, date, leadid)) %>%
+      mutate(article_id = as.numeric(article_id),
+             leadid = ifelse(leader_sentence_dummy=="OTHER",
+                             "OTHER",
+                             leadid))
+    assign(paste0(leader_name, '_entity_sentiment'), e, envir = .GlobalEnv)
+    
+    # GENERATE SENTENCE SENTIMENT (with sentimentr/unpacking)
+    s <- get(paste0(leader_name, '_entity_sentiment')) %>%
+      uncombine() %>%
+      mutate(alpha_setting = ifelse(leader_sentence_dummy==caps_name,
+                                    0.5,
+                                    0.1))
+    assign(paste0(leader_name, '_sentence_sentiment'), s, envir = .GlobalEnv)
+    
+  } 
+}
+
+
+#############################################
+#Creating a higlight function
+highlighter <- function(ccode_param, leadid_param){
+  print(c("CCODDE PARAMETER: ", ccode_param))
+  print(c("LEADID PARAMETER: ", leadid_param))
+  files_vect <- files_df %>%
+    filter(ccode %in% ccode_param | leadid %in% leadid_param) %>%
+    select(file_name)
+  
+  files_list <- deframe(files_vect)
+  for (file in files_list) {
+    leader_name <- paste0(str_match(file, "(.*(?=_resolved))")[,2],
+                          str_match(file, "(?=leadid-(.*)(?=_temp.csv))")[,2])
+    leader_name_only <- str_match(file, "(.*(?=_resolved))")[,2]
+    country <- get(paste0(leader_name, '_processed')) %>%
+      select(country) %>%
+      unique() %>%
+      toString()
+    
+    mins_df <- get(paste0(leader_name, '_entity_sentiment')) %>%
+      slice_min(order_by=ave_sentiment, n=5) %>%
+      select(article_id) %>%
+      deframe()
+    
+    maxs_df <- get(paste0(leader_name, '_entity_sentiment')) %>%
+      slice_max(order_by=ave_sentiment,n=5) %>%
+      select(article_id) %>%
+      deframe()
+    
+    extreme_ids <- c(mins_df, maxs_df)
+    
+    extreme_df <- get(paste0(leader_name, '_processed')) %>%
+      filter(article_id %in% extreme_ids) %>%
+      group_by(article_id) %>%
+      mutate(article_sentence_id = row_number())
+      
+    extreme_sentence_sentiment <- extreme_df %$%
+      sentiment_by(sentences, list(article_id, article_sentence_id)) %>%
+      select(article_id, article_sentence_id, ave_sentiment)
+    
+    extreme_entity_sentiment <- extreme_df %$%
+      sentiment_by(sentences, list(article_id, leader_sentence_dummy)) %>%
+      pivot_wider(names_from=leader_sentence_dummy,
+                  values_from=ave_sentiment)%>%
+      select(-c(sd, word_count))
+      
+  
+    df <- left_join(extreme_df, extreme_sentence_sentiment,
+                    by=c("article_id", "article_sentence_id")) %>%
+      left_join(extreme_entity_sentiment) %>%
+      view()
+  }
+  
+}
+
+
+highlighter(c(),c('ctb-140-2'))
+
+batch_sentiment(c(140),c())
+
+
