@@ -1,0 +1,109 @@
+{
+  "main": {
+    "id": "7592f12b67fe8017",
+    "type": "split",
+    "children": [
+      {
+        "id": "b7c767999d0a66a7",
+        "type": "leaf",
+        "state": {
+          "type": "graph",
+          "state": {}
+        }
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "c45def2414e8497d",
+    "type": "split",
+    "children": [
+      {
+        "id": "4e4ded36bb2dd3e6",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "9e418098cd482613",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {}
+            }
+          },
+          {
+            "id": "3f4cc91e546ad815",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "tag:#Networks",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 306
+  },
+  "right": {
+    "id": "ff241ab5aab10078",
+    "type": "split",
+    "children": [
+      {
+        "id": "553ef02fbd775ac1",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "8fd89467cf66a11e",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              }
+            }
+          },
+          {
+            "id": "7b9528cd97238cac",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "active": "b7c767999d0a66a7",
+  "lastOpenFiles": [
+    "DAN - Dual-view Representation Learning for Adapting Stance Classifiers to New Domains/DAN - Dual View Representation Learning for Adapting Stance Classifiers to New Domains.md",
+    "Cross-Target Stance Classification with Self-Attention Networks/Cross-Target Stance Classification with Self-Attention Networks.md",
+    "Topic-Specific Sentiment Analysis Can Help Identify Political Ideology/Topic-Specific Sentiment Analysis Can Help Identify Political Ideology.md",
+    "Stance Detection in COVID-19 Tweets/Stance Detection in COVID-19 Tweets.md",
+    "DAN - Dual View Representation Learning for Adapting Stance Classifiers to New Domains.md",
+    "TEMPORARTY LIT REVIEW NOTES TEMPLATE.md",
+    "Untitled.md",
+    "Pasted image 20211014164759.png",
+    "Stance Detection in COVID-19 Tweets/Stance Detection in COVID-19 Tweets.pdf",
+    "Pasted image 20211014143233.png"
+  ]
+}
