@@ -100,9 +100,9 @@ After data collection, to date, work on this project has primarily focussed on c
     \subsection{VADER}
         In light of the poor SentimentR results we turned to VADER to see if the valence-aware dictionary-based approach was worthwhile. In effect, I was testing to see if VADER and SentimentR produced different scores for the same sentences.\\
 
-        Below, Figure 2 plots the correlation between VADER and SentimentR scores for selected Australian leaders. One of the features of VADER over SentimentR is that it preserves extreme values more often than does SentimentR. However, this property is symmetric at the sentence-level and entity-level observations are similarly clustered around 0 (perfectly neutral.)
+        Below, Figure 2 plots the correlation between VADER and SentimentR scores for selected Australian leaders. One of the features of VADER over SentimentR is that it preserves extreme values more often than does SentimentR. However, this property is symmetric at the sentence-level and entity-level observations are similarly clustered around 0 (perfectly neutral.)\\
 
-        \begin{figure}[b]
+        \begin{figure}[t]
             % \caption{SentimentR score vs. VADER score for selected Australian prime ministers}
             \includegraphics[width=\textwidth]{figures/AUS_VADER_SentimentR_Corels.png}
         \end{figure}
@@ -120,7 +120,7 @@ After data collection, to date, work on this project has primarily focussed on c
 
         As noted above, at the article-, paragraph-, and sentence-level, BART returns a three-tuple of scores on the unit interval indicating the probability that the text segment of interest is closest to either ``Positive,'' ``Neutral,'' or ``Negative.'' To test whether BART was returning accurate sentiment evaluations, I assigned members of the research group 20 articles to score by hand so that results could be compared. Readers were asked to mark each article as being ``Very negative'' ``Negative,'' ``Neutral,'' ``Positive,'' or ``Very Positive.''\footnote{In some instances sentence- and paragraph-level text segments were also scored in the same fashion.} For purposes of comparison, I coerced BART scores into similar categories.\\
 
-        Below, Table 1 contains pairwise Cohen's Kappa statistics that measure the degree of agreement between readers and/or BART. Additionally, because of the difficulty of interpreting the Kappa statistic, table (INSERT TABLE HERE) outlines generally agreed-upon thresholds for what each statistic means.
+        Below, Table 1 contains pairwise Cohen's Kappa statistics that measure the degree of agreement between readers and/or BART. Additionally, because of the difficulty of interpreting the Kappa statistic, Table 2 outlines generally agreed-upon thresholds for what each statistic means.
 
         \begin{table}[ht]
             \centering
@@ -159,7 +159,7 @@ After data collection, to date, work on this project has primarily focussed on c
                 % \resizebox*{\textwidth}{!}{
                     \begin{tabular}{@{}cc@{}}
                         \toprule
-                        \multicolumn{1}{l}{\textbf{Kappa value ($\kappa$)}} & \multicolumn{1}{l}{\textbf{Interpretation}} \\ \midrule
+                        \multicolumn{1}{c}{\textbf{Kappa value ($\kappa$)}} & \multicolumn{1}{c}{\textbf{Interpretation}} \\ \midrule
                         \textless{}0 & Less than chance agreement \\
                         0-0.2        & Slight agreement           \\
                         0.2-0.4      & Fair agreement             \\
@@ -175,12 +175,12 @@ After data collection, to date, work on this project has primarily focussed on c
 \section{Challenges}
     As evidenced by the inter-rater agreement statistics presented in Table 1, evaluating the sentiment of article published by \textit{The Economist} is difficult, even for human readers. That is, because the sentiment expressed by \textit{The Economist} is indicated by subtle cues, it is hard for humans to regularly and consistently agree upon the sentiment expressed about a leader.\\
 
-    In particular, the purpose of this project is to identify something that is very abstract and very diffuse: the sentiment of \textit{The Economist's} evaluation of a leader. These layers of abstraction require an extraordinary amount of context about the issue domain that is the subject matter of a given article, \textit{The Economist's} regular editorial position, any deviation that the \textit{The Economist} might take from its regular position, domain-specific idioms, and a familiarity with the authorial voice and style used by \textit{The Economist}.\\
+    In particular, the purpose of this project is to identify something that is very abstract and very diffuse: the sentiment of \textit{The Economist's} evaluation of a leader and/or his or her policies. These layers of abstraction require an extraordinary amount of context about the issue domain that is the subject matter of a given article, \textit{The Economist's} regular editorial position, any deviation that the \textit{The Economist} might take from its regular position, domain-specific idioms, and a familiarity with the authorial voice and style used by \textit{The Economist}.\\
 
-    Individually, these problems might be tractable. Taken together however, they pose a challenge that I have identified in five parts. The remainder of this section will focus on interpreting BART results (even if the challenges identified also apply to the SentimentR/VADER approach).
+    Individually, these problems might be tractable. Taken together however, they pose a challenge that I have identified in four parts. The remainder of this section will focus on interpreting BART results (even if the challenges identified also apply to the SentimentR/VADER approach).\footnote{For ease of reading, this section might best be read with \texttt{BART\_SCORING\_SMOOTH\_COLORS.html} and/or the Google sheet open.}
     
-    \subsection{Higher-resolution segment (un)certainty}\footnote{For ease of reading, this section might best be read with \texttt{BART\_SCORING\_SMOOTH\_COLORS.html} open.}
-        A \textit{prima facie} inspection of BART results might be encouraging. At the article-level, the highest scores (used to identify the ``categorical'' score for a text segment) tend to reflect the general tone of the article. Additionally, these scores are often returned with a considerable degree of certainty. That is, BART evaluates an article as being considerably more likely to belong to a single cluster than to the other two.\footnote{A notable exception to this is the article about Spanish Prime Minister Jose Luis Rodriguz Zapatero, about which BART thinks the article is either quite positive or quite negative be definitely not neutral.}\\
+    \subsection{Higher-resolution segment (un)certainty}
+        A \textit{prima facie} inspection suggests BART results might be encouraging. At the article-level, the highest scores (used to identify the ``categorical'' score for a text segment) tend to reflect the general tone of the article. Additionally, these scores are often returned with a considerable degree of certainty. That is, BART evaluates an article as being considerably more likely to belong to a single cluster than to the other two.\footnote{A notable exception to this is the article about Spanish Prime Minister Jose Luis Rodriguz Zapatero, about which BART thinks the article is either quite positive or quite negative be definitely not neutral.}\\
 
         However, when evaluating text segments at the paragraph- or sentence-level, BART scores moderate across the three categories (i.e. BART is much less sure of which cluster a paragraph or sentence might belong to) or tend to the extremes without obvious (to humans) reason. With respect to the first problem, consider a sentence in an article about Emmanuel Macron published on September 30, 2017:
         
@@ -188,23 +188,47 @@ After data collection, to date, work on this project has primarily focussed on c
             Having had no seats, Alternative for Germany, a disruptive and polarising force, is now the Bundestag's third largest party.
         \end{quote}
 
-        Because BART lacks domain specific context and knowledge about \textit{The Economist's}position on the AfD, BART is very uncertain about which category this sentence belongs to. By contrast, a human reader would likely mark this sentence as ``negative'' ``very negative.''\\
+        Because BART lacks domain specific context and knowledge about \textit{The Economist's}position on the AfD, BART is very uncertain about which category this sentence belongs to. By contrast, a human reader would likely mark this sentence as ``negative'' or ``very negative.''\\
 
-        On the other hand, in an article published in 2002 about European political shifts, the sentence ``What is true of Germany is true of the rest of Europe'' is scored very confidently positively.\\
+        On the other hand, in an article published in 2002 about European political shifts, the sentence ``What is true of Germany is true of the rest of Europe,'' is scored very confidently positively even though it is unclear to a human reader why this is the case. This problem, when taken together with leader reference ambiguity problem (described below), poses a considerable challenge.
 
-        A desirable property of a good sentiment analysis tool should be consistency, something that BART lacks.
-
-    \subsection{Affect bias}
-        
-
-    \subsection{Disaster/event bias}
+    \subsection{Disaster/event and Affect bias}
+        Though it does appear to identify semantically relevant evaluations of sentiment more distinctly and accurately than does SentimentR or VADER, BART still suffers from a disaster/affect bias in its evaluation of articles. Take for instance an article about a nuclear disaster in Japan and prime minister Obuchi Keizo's response. BART identifies the article as being broadly negative --- in large part, it appears, because of the mention of nuclear disaster. BART is unable, however, to readily distinguish the relatively neutral sentiment about Obuchi's response to the nuclear disaster, from the apocalyptic language used to describe the disaster itself. This is a problem that cannot obviously be resolved without conducting sentiment analysis with higher-resolution text segments, which itself (as described above) is beset by problems.
 
     \subsection{Leader reference ambiguity}
+        Most articles published by \textit{The Economist} do not cleanly identify a single leader That is, articles are not profiles. Instead, articles often draw comparisons against other world leaders, domestic political allies and adversaries, business leaders, and other notable figures. Thus, it is inappropriate to take the sentiment score (or categorization) of an article and suppose that score is actually reflective of \textit{The Economist's} opinion of a leader of interest.\\
+
+        Consider the September 2017 article published about Angela Merkel. This article is largely laudatory of her and hopeful for her fourth term as chancellor of Germany. (BART and most human readers agree that this article is generally positive.) However, this article also mentions Donald Trump and Vladimir Putin  --- and, by our current procedure --- this would be identified as a Trump article and a Putin article in addition to a Merkel article. The first three sentences of the article, open as follows:
+
+        \begin{quote}
+            To her many fans, Angela Merkel is the hero who stands up to Donald Trump and Vladimir Putin,, and who generously opened her country to refugees. To others she is the villain whose ill-thought-out gamble on immigration is ``ruining Germany,'' as Mr Trump once put it, and whose austerity policies laid waste to southern Europe. The fans are closer to the truth.\footnote{BART currently scores the first sentence very positively, the second sentence very negatively, and the third sentence mixed between positive and neutral. Though this seems like correct scoring with Merkel as the primary entity, note that the reverse is true for Trump and Putin.}
+        \end{quote}
+
+        This leader ambiguity problem is consistent across many types of articles, particularly those that focus on bilateral relations. A potential solution would be to tag an article as being associated with a leader only if the the leader cluster appears in a number of spans greater than some pre-determined threshold. To my mind this would be inappropriate for two reasons. First, this is likely to remove large parts of the sample for leaders who are only mentioned a small number of times by \textit{The Economist} or remove leaders from the sample entirely. Second, the style of \textit{The Economist} is often to moderate the language of its evaluation of a leader when an article is primarily about a leader by offering nuance, but be more explicit when a leader is not the primary subject.\footnote{This problem is given further treatment in section 6.} In the case of the Merkel article, a human reader can identify that the first three sentences are laden with seniment-weighted language. That is, even if --- as in the case of Trump and Putin --- there are many articles in the corpus that mention a leader, observations like the one above are valuable and should be preserved in the corpus because they tip \textit{The Economist's} hand.\footnote{Taken in conjunction with the high-resolution uncertainty problem descibed above however, this becomes doubly hard. Ideally, these highly sentiment-salient sentences could be identified and extracted as being the most important parts of an article. But, BART performs poorly on high-resolution text segments.}\\
 
     \subsection{Leader-policy-colleague metynomic ambiguity}
+        Humans and BART alike struggle with the problem of how to assess \textit{The Economist's} evaluation of leader with respect to the attribution of successes/failures to a leader of interest, a leader's policies, a leader's (cabinet) colleagues, etc. That is, BART does poorly at evaluating sentences that are salient to a leader's ideological position but do only indirectly reference a leader.\\
 
+        Take, for instance, a 2018 article about Spanish Prime Ministers Mariano Rajoy and Pedro Sanchez that in part reads as follows:
+
+        \begin{quote}
+            The new prime minister has not offered to repeal Mr Rajoy's liberalising labour market reform, as the unions would like. This reform has helped to spur a rapid fall in unemployment during the past four years of strong economic recovery from the euro crisis. All this means that the political shake-up has caused scarcely a ripple among investors, who are more concerned with Italy's political crisis.
+        \end{quote}
+
+        The construction of this paragraph makes reading comprehension and sentiment analysis (with respect to Rajoy and Sanchez) difficult. It is left to the reader to interpret \textit{The Economist's} position on labor market reforms and to what degree ``not [offering] to repeal'' them reflects well or poorly on Rajoy (who implemented them) or Sanchez (who has merely yet to suggest repealing them). Because BART does not have access to external sources of context this is harder still.\\
+
+        The same or similar problems proliferate rapidly because \textit{The Economist} comments on matters of politics, domestic policy, and international relations. This causes the number of relative comparisons or attributions to increase without an obvious way to weight the relative importance of these domains. Consider the case of a wide-ranging article about Manhmohan Singh, prime minister of India. The article opines on past performance as finance minister, current political predicaments, and a comparison of development policy with China. How should each of these pronouncements be weighted? Should this Singh-article receive a very positive score because it is optimistic about the potential for his reforms? Or should that score be moderated because despite positively assessed reforms, inability to achieve them suggests failure of competence? While this case might be easy to decide, the number of ``long-tail'' attributions makes accurate, systematic evaluation hard.
 
 \section{The Case to End this (version of the) Project}
 
+        A sentiment analysis tool, for the purposes of this project should have at least the following two desirable properties: First, it should at least be able to identify the most extreme evaluations. In the subset of 20 articles scored by BART the article about Bolsonaro reads to human readers as the most negative. BART however, only rates it as moderately negative (less negative than other articles). To my mind this is a meaningful failure. Inability to identify the most extreme values suggests that the underlying tool is likely to be inaccurate when dealing with more nuanced cases. Second, it should be able to identify the most important text segment(s) when evaluating an article at large. That is, \textit{The Economist} often concentrates sentiment-laden sentences or paragraphs together, even if the majority of the article contains relatively neutral fact-based or fact-like sentences.\footnote{Even if all sentences were pre-processed for fact-opinion distinction, the problem remains that \textit{The Economist} often uses statements of fact to cast negative aspersions about the performance of a leader, for instance in the midst of a crisis.} It would be a desirable trait of a sentiment analysis tool to segregate the most important sentiment-laden sentences/text segments from the neutral statements before evaluating them. That is currently out of reach of BART.\footnote{Additionally, trying to identify these most sentiment-laden sentences by hand is as hard as merely reading and scoring every article by humans.}\\
 
+        It is my opinion that what we are asking of existing NLP tools remains out of reach. If \textit{The Economist} exhibited just one of the problems described above, this problem might be tractable. However, taken together, I do not think that the existing technology could accurately assess what we are trying to isolate (the sentiment of \textit{The Economist's} evaluation of a leader (and his/her policies)). The above problems do not exist in isolation from each other but are tightly connected and enmeshed. I think that this is borne out by the amount of disagreement among human readers. What we are trying to do is still hard for human readers and NLP techniques are not yet sufficiently advanced to replicate even human performance.\\
+
+        This poor performance has a double penalty for us. First, an ``incorrect'' sentiment evaluation does not merely get dropped for the sample. It remains in the sample but incorrectly coded.\footnote{Unfortunately checking that the sentiment has been correctly coded is analogous to an NP-hard problem. That is, it is as hard to check for correctness as it is to evaluate sentiment correctly.} Second, any incorrectly coded observations may drive (incorrect) results in future (regression) analysis.\\
+
+        Even if it was the case that a simple, highly accurate sentiment evaluation tool became rapidly available, we have yet to seriously consider the data collection process for response variables. A cursory inspection suggests that post-office compensation details are hard to systematically identify and may be inaccurate (becuase post-office earnings are not subject to any kind of disclosure rules or transparency norms). Making this problem doubly hard is the many different kinds of compensation that a former world leader might receive. For instance, how would one weight a large advance on a book deal against speaking fees? Should immediately-post-office earnings be weighted more or less heavily than delayed post-office earnings? Again, if these questions could be quickly answered, and present unreliability of the predictive variables (presently only \text{The Economist} sentiment evaluations) be quickly resolved, there remains less-than-one probability of identifying robust results.\\
+
+        For these reasons, I am of the opinion that the outlook for this project is dim. Without considerable advancement in methods, and with little guarantee of robust results, I think that the probability of success is low. 
+    
 \end{document}
